@@ -460,6 +460,6 @@ async function start() {
   }
 }
 
-
+start()
 // Start the bot
 bot.start();
