@@ -1,11 +1,16 @@
-const { Bot, session, InlineKeyboard  } = require('grammy');
-const mongoose = require('mongoose');
-require('dotenv').config();
-const { Api } = require('grammy');
+import { Bot, session, InlineKeyboard } from 'grammy';
+import pkg from 'mongoose';
+const { connect, connection, Schema, model } = pkg;
+import dotenv from "dotenv";
+dotenv.config()
+import { Api } from 'grammy';
+import convertToAscii from './utils/converter.js';
+import {callBack, Start} from './command/callback.js';
+import {statMarkup, helpMarkup, join} from './command/button.js'
+import { help, about, issues, id } from './command/command.js';
 
-
-const express = require('express');
-const bodyParser = require('body-parser');
+import express from 'express';
+import bodyParser from 'body-parser';
 
 const bot = new Bot(process.env.BOT_TOKEN);
 const api = new Api(process.env.BOT_TOKEN);
@@ -13,29 +18,29 @@ const port = process.env.PORT || 3000;
 const webhookurl = process.env.WEBHOOK_URL
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
+connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
-const db = mongoose.connection;
+const db = connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 db.once('open', () => {
   console.log('Connected to MongoDB');
 });
 
 // Define a schema for storing users
-const UserSchema = new mongoose.Schema({
+const UserSchema = new Schema({
   chatId: { type: Number, required: true, unique: true },
   username: { type: String, required: true },
   firstName: String,
   lastName: String,
   isAdmin: { type: Boolean, default: false },
-  isBlocked: { type: Boolean, default: false }, // Add this line
+  isBlocked: { type: Boolean, default: false }, 
 });
 
 
-const User = mongoose.model('User', UserSchema);
+const User = model('User', UserSchema);
 
 // Middleware to handle user registration
 bot.use(session({
@@ -79,7 +84,7 @@ bot.use(async (ctx, next) => {
     try {
       const user = await User.findOne({ chatId: ctx.from.id }).exec();
       if (user && user.isBlocked) {
-        return ctx.reply('You are blocked from using this bot.');
+        return ctx.reply('You are blocked from using this bot 👩‍🦯');
       }
     } catch (error) {
       console.error('Error checking if user is blocked:', error);
@@ -92,18 +97,19 @@ bot.use(async (ctx, next) => {
 // Force subscribe middleware
 bot.use(async (ctx, next) => {
   const channelId = process.env.CHANNEL_ID;
+  const channelUserName = process.env.CHANNEL_USERNAME;
   const chatId = ctx.from.id;
 
   try {
     const member = await api.getChatMember(channelId, chatId);
 
     if (member.status === 'left' || member.status === 'kicked') {
-      await ctx.reply(`Please subscribe to our channel to use this bot: https://t.me/pencemo_resources`);
+      await ctx.reply(`Please subscribe our channel to use this bot 😐 @${channelUserName}`,{...join});
       return;
     }
   } catch (error) {
     if (error.error_code === 400 && error.description.includes('member not found')) {
-      await ctx.reply(`You are not a member of the channel. Please subscribe to use this bot: https://t.me/pencemo_resources`);
+      await ctx.reply(`You are not a member of the channel. Please subscribe to use this bot 😐 @${channelUserName}`,{...join});
     } else {
       console.error('Error checking channel subscription:', error);
       await ctx.reply('An error occurred while checking your subscription status. Please try again later.');
@@ -129,11 +135,19 @@ bot.command('start', async (ctx) => {
     });
   }
 
-  ctx.reply(`Welcome ${first_name}! Use /help to see available commands.`);
+  ctx.reply(`Hi ${first_name} \n`+Start,{
+    parse_mode: 'MarkdownV2',
+    ...statMarkup
+  });
 });
 
+bot.command('help', help)
+bot.command('about', about)
+bot.command('issues', issues)
+bot.command('id', id)
+
 // Command to find a user by username (admin only)
-bot.command('finduser', async (ctx) => {
+bot.command('search', async (ctx) => {
   if (!ctx.session.user || !ctx.session.user.isAdmin) {
     return ctx.reply('You are not authorized to use this command.');
   }
@@ -170,7 +184,6 @@ bot.command('sendmessage', async (ctx) => {
       await bot.api.sendMessage(user.chatId, message);
       ctx.reply(`Message sent to @${username}.`);
     } catch (error) {
-      console.error('Error sending message:', error);
       ctx.reply(`Failed to send message to @${username}.`);
     }
   } else {
@@ -316,7 +329,7 @@ bot.command('allusers', async (ctx) => {
 });
 
 // Command for users to send messages to the admin
-bot.command('messagetoadmin', async (ctx) => {
+bot.command('toadmin', async (ctx) => {
 const messageText = ctx.message.text.split(' ').slice(1).join(' ');
 
 if (!messageText) {
@@ -331,7 +344,7 @@ if (admins.length === 0) {
 
 admins.forEach(async (admin) => {
   try {
-    await bot.api.sendMessage(admin.chatId, `Message from @${ctx.from.username}: ${messageText}`);
+    await bot.api.sendMessage(admin.chatId, `Message from @${ctx.from.username}:\n\n ${messageText}`);
   } catch (error) {
     console.error(`Error sending message to admin ${admin.username}:`, error);
     ctx.reply(`Error sending message to admin ${admin.username}`);
@@ -362,7 +375,7 @@ bot.command('blockusers', async (ctx) => {
       ).exec();
 
       if (user) {
-        await bot.api.sendMessage(user.chatId, 'You have been blocked from using this bot.');
+        await bot.api.sendMessage(user.chatId, 'You have been blocked from using this bot 😏');
         ctx.reply(`User @${username} has been blocked.`);
       } else {
         ctx.reply(`User @${username} not found.`);
@@ -394,6 +407,7 @@ bot.command('unblockusers', async (ctx) => {
       ).exec();
 
       if (user) {
+        await bot.api.sendMessage(user.chatId, 'You have been unblocked. Now you can use the bot ☺️');
         ctx.reply(`User @${username} has been unblocked.`);
       } else {
         ctx.reply(`User @${username} not found.`);
@@ -426,6 +440,27 @@ bot.command('blockedusers', async (ctx) => {
 });
 
 
+bot.on("callback_query:data", callBack)
+
+
+bot.on("message:text", ctx => {
+  var asciiArray = convertToAscii(ctx.message.text);
+  let asciiText = '';
+  asciiArray.map((item) => {
+     asciiText += item.chunk;
+  });
+  
+  ctx.reply(asciiText,{
+     reply_markup:{
+        inline_keyboard: [
+           [
+                {text: '🌟 Share Me 🌟', url:'http://t.me/share/url?url=https://t.me/Unicodepro_bot'}
+            ]
+        ]
+    }
+  });
+});
+
 
 
 // Global error handler
@@ -441,25 +476,26 @@ bot.catch((err) => {
 
 
 
-const app = express();
-app.use(bodyParser.json());
+// const app = express();
+// app.use(bodyParser.json());
 
-// Webhook endpoint
-app.post('/webhook', async (req, res) => {
-  await bot.handleUpdate(req.body);
-  res.sendStatus(200);
-});
+// // Webhook endpoint
+// app.post('/webhook', async (req, res) => {
+//   await bot.handleUpdate(req.body);
+//   res.sendStatus(200);
+// });
 
-// Start bot and server
-async function start() {
-  try {
-    await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
-    app.listen(port, () => console.log(`Bot listening on port ${port}`));
-  } catch (error) {
-    console.error('Error starting bot:', error);
-  }
-}
+// // Start bot and server
+// async function start() {
+//   try {
+//     await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
+//     app.listen(port, () => console.log(`Bot listening on port ${port}`));
+//   } catch (error) {
+//     console.error('Error starting bot:', error);
+//   }
+// }
 
-start()
+// start()
+
 // Start the bot
 bot.start();
