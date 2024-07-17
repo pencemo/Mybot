@@ -1,13 +1,12 @@
 import { Bot, session, InlineKeyboard } from 'grammy';
-import pkg from 'mongoose';
-const { connect, connection, Schema, model } = pkg;
 import dotenv from "dotenv";
 dotenv.config()
 import { Api } from 'grammy';
 import convertToAscii from './utils/converter.js';
 import {callBack, Start} from './command/callback.js';
 import {statMarkup, helpMarkup, join} from './command/button.js'
-import { help, about, issues, id } from './command/command.js';
+import { help, about, issues, id , search} from './command/command.js';
+import { db, User } from './command/db.js';
 
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -17,30 +16,7 @@ const api = new Api(process.env.BOT_TOKEN);
 const port = process.env.PORT || 3000;
 const webhookurl = process.env.WEBHOOK_URL
 
-// Connect to MongoDB
-connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
 
-const db = connection;
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', () => {
-  console.log('Connected to MongoDB');
-});
-
-// Define a schema for storing users
-const UserSchema = new Schema({
-  chatId: { type: Number, required: true, unique: true },
-  username: { type: String, required: true },
-  firstName: String,
-  lastName: String,
-  isAdmin: { type: Boolean, default: false },
-  isBlocked: { type: Boolean, default: false }, 
-});
-
-
-const User = model('User', UserSchema);
 
 // Middleware to handle user registration
 bot.use(session({
@@ -64,6 +40,17 @@ bot.use(session({
     ctx.session = session; // Save updated session
   },
 }));
+
+
+bot.use(async (ctx, next) => {
+  if (ctx.chat?.type !== 'private') {
+    // If the chat is not private, ignore the message and do nothing
+    return;
+  }
+  // If the chat is private, proceed with the next middleware
+  return next();
+});
+
 
 // Load admin usernames from environment variables
 const adminUsernames = process.env.ADMIN_USERNAMES ? process.env.ADMIN_USERNAMES.split(',') : [];
@@ -120,8 +107,7 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
-// Command to start interaction with the bot
-bot.command('start', async (ctx) => {
+bot.use(async (ctx, next) => {
   const { id, username, first_name, last_name } = ctx.from;
 
   let user = await User.findOne({ chatId: id }).exec();
@@ -134,7 +120,12 @@ bot.command('start', async (ctx) => {
       lastName: last_name,
     });
   }
+  return next();
+})
 
+// Command to start interaction with the bot
+bot.command('start', async (ctx) => {
+  const {first_name} = ctx.from;
   ctx.reply(`Hi ${first_name} \n`+Start,{
     parse_mode: 'MarkdownV2',
     ...statMarkup
@@ -147,23 +138,7 @@ bot.command('issues', issues)
 bot.command('id', id)
 
 // Command to find a user by username (admin only)
-bot.command('search', async (ctx) => {
-  if (!ctx.session.user || !ctx.session.user.isAdmin) {
-    return ctx.reply('You are not authorized to use this command.');
-  }
-
-  const username = ctx.message.text.split(' ')[1];
-  if (!username) {
-    return ctx.reply('Please provide a username to search.');
-  }
-
-  const user = await User.findOne({ username }).exec();
-  if (user) {
-    ctx.reply(`User found:\nUsername: @${user.username}\nName: ${user.firstName} ${user.lastName}`);
-  } else {
-    ctx.reply('User not found.');
-  }
-});
+bot.command('search', search);
 
 // Command to send message to a user (admin only)
 bot.command('sendmessage', async (ctx) => {
@@ -282,13 +257,10 @@ bot.command('broadcast', async (ctx) => {
       }
     } catch (error) {
       if (error.response && error.response.error_code === 403) {
-        // console.log(`User ${user.username} blocked the bot. Removing from database.`);
         ctx.reply(`User ${user.username} blocked the bot. Removing from database.`);
         await User.findOneAndDelete({ chatId: user.chatId });
       } else {
-        // console.error(`Error sending message to ${user.username}:`, error);
         ctx.reply(`Error sending message to ${user.username}`);
-        await User.findOneAndDelete({ chatId: user.chatId });
       }
     }
   }

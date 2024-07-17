@@ -53,7 +53,7 @@ export const home = {
         ]
     }
 }
-export const join = {
+const join = {
     reply_markup: {
         inline_keyboard: [
             [
@@ -62,3 +62,35 @@ export const join = {
         ]
     }
 }
+
+const adminBtn = {
+    reply_markup: {
+        inline_keyboard: [
+            [
+                { text: 'Commands 📝', callback_data: 'command' },
+                { text: 'Users 👤', callback_data: 'users' }
+            ],
+            [
+                { text: 'Blocked 🔕', callback_data: 'blockuser' },
+                { text: 'Home 🏠', callback_data: 'start' }
+            ],
+            [
+                { text: 'Back 🔙', callback_data: 'help' },
+            ]
+        ]
+    }
+}
+
+const adminBack = {
+    reply_markup: {
+        inline_keyboard: [
+            [
+                { text: 'Back 🔙', callback_data: 'admin' }
+            ]
+        ]
+    }
+}
+
+
+
+export {join, adminBtn, adminBack};
