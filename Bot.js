@@ -5,7 +5,7 @@ import { Api } from 'grammy';
 import convertToAscii from './utils/converter.js';
 import {callBack, Start} from './command/callback.js';
 import {statMarkup, helpMarkup, join} from './command/button.js'
-import { help, about, issues, id , search} from './command/command.js';
+import { help, about, issues, id , search, deleteuser} from './command/command.js';
 import { db, User } from './command/db.js';
 
 import express from 'express';
@@ -111,13 +111,26 @@ bot.use(async (ctx, next) => {
   const { id, username, first_name, last_name } = ctx.from;
 
   let user = await User.findOne({ chatId: id }).exec();
+  const admins = await User.find({ isAdmin: true }).exec();
 
   if (!user) {
     user = await User.create({
       chatId: id,
-      username,
+      username: username || '',
       firstName: first_name,
       lastName: last_name,
+    });
+
+    admins.forEach(async (admin) => {
+      try {
+        let name = `@${username}`
+        if (!username){
+          name = first_name
+        }
+        await bot.api.sendMessage(admin.chatId, `${name} Start This bot`);
+      } catch (error) {
+        console.log(error);
+      }
     });
   }
   return next();
@@ -143,6 +156,7 @@ bot.command('id', id)
 
 // Command to find a user by username (admin only)
 bot.command('search', search);
+bot.command('delete', deleteuser);
 
 // Command to send message to a user (admin only)
 bot.command('sendmessage', async (ctx) => {
@@ -296,8 +310,8 @@ bot.command('allusers', async (ctx) => {
   try {
     const users = await User.find().exec();
     const userCount = await User.countDocuments().exec();
-    const usernames = users.map(user => `@${user.username}`).join('\n');
-    ctx.reply(`Total number of users: ${userCount}\n\nUsernames:\n${usernames}`);
+    const usernames = users.map(user => `${user.username ? `@${user.username}` : user.firstName}`).join('\n');
+    ctx.reply(`Total users ⌛ ${userCount}\n\n📝 Usernames\n${usernames}`);
   } catch (error) {
     console.error('Error fetching users:', error);
     ctx.reply('Failed to fetch user list.');
@@ -320,77 +334,107 @@ if (admins.length === 0) {
 
 admins.forEach(async (admin) => {
   try {
-    await bot.api.sendMessage(admin.chatId, `Message from @${ctx.from.username}:\n\n ${messageText}`);
+    await bot.api.sendMessage(admin.chatId, `💌 Message from @${ctx.from.username}\n\n ${messageText}`);
   } catch (error) {
-    console.error(`Error sending message to admin ${admin.username}:`, error);
-    ctx.reply(`Error sending message to admin ${admin.username}`);
+    ctx.reply(`Error sending message to admin`);
   }
 });
 
-ctx.reply('Your message has been sent to the admin.');
+ctx.reply('Your message has been sent to the admin ✔️.');
 ctx.react("😍")
 });
 
 // Command to block one or more users (admin only)
-bot.command('blockusers', async (ctx) => {
+bot.command('block', async (ctx) => {
   if (!ctx.session.user || !ctx.session.user.isAdmin) {
     return ctx.reply('You are not authorized to use this command.');
   }
 
-  const usernames = ctx.message.text.split(' ').slice(1);
-  if (usernames.length === 0) {
+  const identifiers = ctx.message.text.split(' ').slice(1);
+  if (identifiers.length === 0) {
     return ctx.reply('Please provide at least one username to block.');
   }
 
-  for (const username of usernames) {
+  for (const identifier of identifiers) {
     try {
-      const user = await User.findOneAndUpdate(
-        { username },
-        { isBlocked: true },
-        { new: true }
-      ).exec();
+      let user;
+      if (!isNaN(identifier)) {
+        // Identifier is a number, treat it as chat ID
+        user = await User.findOneAndUpdate(
+          { chatId: identifier },
+          { isBlocked: true },
+          { new: true }
+        ).exec();
+      } else {
+        // Identifier is not a number, treat it as username or first name
+        user = await User.findOneAndUpdate(
+          {
+            $or: [
+              { username: identifier },
+              { firstName: identifier }
+            ]
+          },
+          { isBlocked: true },
+          { new: true }
+        ).exec();
+      }
 
       if (user) {
         await bot.api.sendMessage(user.chatId, 'You have been blocked from using this bot 😏');
-        ctx.reply(`User @${username} has been blocked.`);
+        ctx.reply(`User @${identifier} has been blocked.`);
       } else {
-        ctx.reply(`User @${username} not found.`);
+        ctx.reply(`User @${identifier} not found.`);
       }
     } catch (error) {
-      console.error(`Error blocking user @${username}:`, error);
-      ctx.reply(`Failed to block user @${username}.`);
+      console.error(`Error blocking user @${identifier}:`, error);
+      ctx.reply(`Failed to block user @${identifier}.`);
     }
   }
 });
 
 // Command to unblock one or more users (admin only)
-bot.command('unblockusers', async (ctx) => {
+bot.command('unblock', async (ctx) => {
   if (!ctx.session.user || !ctx.session.user.isAdmin) {
     return ctx.reply('You are not authorized to use this command.');
   }
 
-  const usernames = ctx.message.text.split(' ').slice(1);
-  if (usernames.length === 0) {
+  const identifiers = ctx.message.text.split(' ').slice(1);
+  if (identifiers.length === 0) {
     return ctx.reply('Please provide at least one username to unblock.');
   }
 
-  for (const username of usernames) {
+  for (const identifier of identifiers) {
     try {
-      const user = await User.findOneAndUpdate(
-        { username },
-        { isBlocked: false },
-        { new: true }
-      ).exec();
+      let user;
+      if (!isNaN(identifier)) {
+        // Identifier is a number, treat it as chat ID
+        user = await User.findOneAndUpdate(
+          { chatId: identifier },
+          { isBlocked: true },
+          { new: true }
+        ).exec();
+      } else {
+        // Identifier is not a number, treat it as username or first name
+        user = await User.findOneAndUpdate(
+          {
+            $or: [
+              { username: identifier },
+              { firstName: identifier }
+            ]
+          },
+          { isBlocked: true },
+          { new: true }
+        ).exec();
+      }
 
       if (user) {
         await bot.api.sendMessage(user.chatId, 'You have been unblocked. Now you can use the bot ☺️');
-        ctx.reply(`User @${username} has been unblocked.`);
+        ctx.reply(`User @${identifier} has been unblocked.`);
       } else {
-        ctx.reply(`User @${username} not found.`);
+        ctx.reply(`User @${identifier} not found.`);
       }
     } catch (error) {
-      console.error(`Error unblocking user @${username}:`, error);
-      ctx.reply(`Failed to unblock user @${username}.`);
+      ctx.reply(`Failed to unblock user @${identifier}.`);
     }
   }
 });
@@ -404,13 +448,18 @@ bot.command('blockedusers', async (ctx) => {
   try {
     const blockedUsers = await User.find({ isBlocked: true }).exec();
     if (blockedUsers.length > 0) {
-      const userList = blockedUsers.map(user => `@${user.username}`).join('\n');
+      const userList = blockedUsers.map(user => {
+        if (user.username) {
+          return `@${user.username}`;
+        } else {
+          return user.firstName ? user.firstName : `Id: ${user.chatId}`;
+        }
+      }).join('\n');
       ctx.reply(`Blocked users:\n${userList}`);
     } else {
       ctx.reply('No users are currently blocked.');
     }
   } catch (error) {
-    console.error('Error fetching blocked users:', error);
     ctx.reply('Failed to retrieve blocked users.');
   }
 });

@@ -16,7 +16,7 @@ connect(process.env.MONGODB_URI, {
   // Define a schema for storing users
   const UserSchema = new Schema({
     chatId: { type: Number, required: true, unique: true },
-    username: { type: String, required: true },
+    username: { type: String },
     firstName: String,
     lastName: String,
     isAdmin: { type: Boolean, default: false },
