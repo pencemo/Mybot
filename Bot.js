@@ -410,7 +410,7 @@ bot.command('unblock', async (ctx) => {
         // Identifier is a number, treat it as chat ID
         user = await User.findOneAndUpdate(
           { chatId: identifier },
-          { isBlocked: true },
+          { isBlocked: false },
           { new: true }
         ).exec();
       } else {
@@ -422,7 +422,7 @@ bot.command('unblock', async (ctx) => {
               { firstName: identifier }
             ]
           },
-          { isBlocked: true },
+          { isBlocked: false },
           { new: true }
         ).exec();
       }
