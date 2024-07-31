@@ -4,7 +4,7 @@ dotenv.config()
 import { Api } from 'grammy';
 import convertToAscii from './utils/converter.js';
 import {callBack, Start} from './command/callback.js';
-import {statMarkup, helpMarkup, join} from './command/button.js'
+import {statMarkup, join} from './command/button.js'
 import { help, about, issues, id , search, deleteuser} from './command/command.js';
 import { db, User } from './command/db.js';
 
@@ -107,6 +107,10 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
+function escapeMarkdownV2(text) {
+  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+}
+
 bot.use(async (ctx, next) => {
   const { id, username, first_name, last_name } = ctx.from;
 
@@ -123,11 +127,12 @@ bot.use(async (ctx, next) => {
 
     admins.forEach(async (admin) => {
       try {
-        let name = `@${username}`
-        if (!username){
-          name = first_name
-        }
-        await bot.api.sendMessage(admin.chatId, `${name} Start This bot`);
+        let name = escapeMarkdownV2(username ? `@${username}` : first_name);
+        
+        await bot.api.sendMessage(admin.chatId, `[${name}](tg://user?id=${id}) Start This bot`, {
+          parse_mode: 'MarkdownV2',
+          disable_web_page_preview: true
+        });
       } catch (error) {
         console.log(error);
       }
@@ -136,15 +141,13 @@ bot.use(async (ctx, next) => {
   return next();
 })
 
-function escapeMarkdownV2(text) {
-  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
-}
 // Command to start interaction with the bot
 bot.command('start', async (ctx) => {
-  const {first_name} = ctx.from;
+  const {first_name, id} = ctx.from;
   const firstname = escapeMarkdownV2(first_name)
-  ctx.reply(`Hi ${firstname} \n`+Start,{ 
+  ctx.reply(`Hi [${firstname}](tg://user?id=${id}) \n`+Start,{ 
     parse_mode: 'MarkdownV2',
+    disable_web_page_preview: true,
     ...statMarkup
   });
 });
@@ -265,7 +268,14 @@ bot.command('broadcast', async (ctx) => {
           });
         } else if (messageType.sticker) {
           const fileId = messageType.sticker.file_id;
-          await bot.api.sendSticker(user.chatId, fileId);
+          await bot.api.sendSticker(user.chatId, fileId, {
+            reply_markup: keyboard,
+          });
+        } else {
+          await bot.api.sendMessage(user.chatId, ctx.message.reply_to_message.text, {
+            reply_markup: keyboard,
+            parse_mode: 'MarkdownV2'
+          });
         }
       } else {
         await bot.api.sendMessage(user.chatId, text, {
@@ -275,10 +285,10 @@ bot.command('broadcast', async (ctx) => {
       }
     } catch (error) {
       if (error.response && error.response.error_code === 403) {
-        ctx.reply(`User ${user.username} blocked the bot. Removing from database.`);
+        ctx.reply(`User @${user.username} blocked the bot. Removing from database.`);
         await User.findOneAndDelete({ chatId: user.chatId });
       } else {
-        ctx.reply(`Error sending message to ${user.username}`);
+        ctx.reply(`Error sending message to @${user.username}`);
       }
     }
   }
@@ -310,10 +320,15 @@ bot.command('allusers', async (ctx) => {
   try {
     const users = await User.find().exec();
     const userCount = await User.countDocuments().exec();
-    const usernames = users.map(user => `${user.username ? `@${user.username}` : user.firstName}`).join('\n');
-    ctx.reply(`Total users ⌛ ${userCount}\n\n📝 Usernames\n${usernames}`);
+    const usernames = users.map((user) =>{
+      let Nameofuser = escapeMarkdownV2(user.username ? `@${user.username}` : user.firstName)
+      return `${escapeMarkdownV2('-')} [${Nameofuser}](tg://user?id=${user.chatId})`
+    } ).join('\n');
+    ctx.reply(`⌛ Total users : *${userCount}*\n\n📝 *Names of users*\n\n${usernames}`,{
+      parse_mode: 'MarkdownV2',
+      disable_web_page_preview: true,
+    });
   } catch (error) {
-    console.error('Error fetching users:', error);
     ctx.reply('Failed to fetch user list.');
   }
 });
@@ -465,8 +480,7 @@ bot.command('blockedusers', async (ctx) => {
 });
 
 
-bot.on("callback_query:data", callBack)
-
+let asciiTexts 
 
 bot.on("message:text", ctx => {
   var asciiArray = convertToAscii(ctx.message.text);
@@ -474,17 +488,29 @@ bot.on("message:text", ctx => {
   asciiArray.map((item) => {
      asciiText += item.chunk;
   });
+  asciiText = asciiText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   
-  ctx.reply(asciiText,{
+  ctx.reply(`<code>${asciiText}</code>\n\n⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑\n<i>📝 Use the buttons below to convert to another fonts</i>`,{
+    parse_mode: 'HTML',
      reply_markup:{
         inline_keyboard: [
-           [
-                {text: '🌟 Share Me 🌟', url:'http://t.me/share/url?url=https://t.me/Unicodepro_bot'}
-            ]
+          [
+            {text: 'MLKV', callback_data: 'mlkv'},
+            {text: 'Scribe', callback_data: 'scribe'}
+          ],
+          [
+            {text: 'Apple Cards', callback_data: 'apple'},
+            {text: 'FML, MVM', callback_data: 'mvm'}
+          ]
         ]
     }
   });
+
+  asciiTexts = asciiText;
 });
+
+
+bot.on("callback_query:data", ctx => callBack(ctx, asciiTexts))
 
 
 
@@ -501,26 +527,32 @@ bot.catch((err) => {
 
 
 
-const app = express();
-app.use(bodyParser.json());
+// const app = express();
+// app.use(bodyParser.json());
 
-// Webhook endpoint
-app.post('/webhook', async (req, res) => {
-  await bot.handleUpdate(req.body);
-  res.sendStatus(200);
-});
+// // Webhook endpoint
+// app.post('/webhook', async (req, res) => {
+//   await bot.handleUpdate(req.body);
+//   res.sendStatus(200);
+// });
 
-// Start bot and server
-async function start() {
-  try {
-    await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
-    app.listen(port, () => console.log(`Bot listening on port ${port}`));
-  } catch (error) {
-    console.error('Error starting bot:', error);
-  }
-}
+// // Start bot and server
+// async function start() {
+//   try {
+//     await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
+//     app.listen(port, () => console.log(`Bot listening on port ${port}`));
+//   } catch (error) {
+//     console.error('Error starting bot:', error);
+//   }
+// }
 
-start()
+// start()
 
 // Start the bot
 bot.start();
+
+
+
+
+
+

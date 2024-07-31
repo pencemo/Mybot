@@ -22,6 +22,8 @@ export const helpMarkup = {
            [
               {text: 'Back 🔙', callback_data: 'start'},
               {text: 'Admin 👮‍♂️', callback_data: 'admin'},
+            ],[
+                {text: 'Close', callback_data: 'delete'}
             ]
         ]
     }

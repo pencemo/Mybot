@@ -1,4 +1,4 @@
-import { helpMarkup, aboutMarkup, home } from "./button.js"
+import { home } from "./button.js"
 import { Help, About } from "./callback.js"
 import { db, User } from './db.js';
 
@@ -21,6 +21,8 @@ const help = (ctx) => {
 
  const about = (ctx) => {
     ctx.reply(About, {
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
        ...home
     })
  }
@@ -35,6 +37,9 @@ const help = (ctx) => {
     ctx.reply(`ID : ${ctx.from.id}\nUser Name : @${ctx.from.username}`)
  }
 
+ function replaysletter(text) {
+  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+}
 
 const search = async (ctx) => {
    if (!ctx.session.user || !ctx.session.user.isAdmin) {
@@ -65,7 +70,12 @@ const search = async (ctx) => {
         ).exec();
       }
    if (user) {
-     ctx.reply(`🔎 User found:\n\n● User ID: ${user.chatId}\n● Username: @${user.username}\n● Name: ${user.firstName} ${user.lastName && user.lastName}\n● Status: ${user.isBlocked ? 'Blocked ❌' : 'Active ✔️'}`);
+     let username = replaysletter(user.username ? user.username : '')
+     let firstName = replaysletter(user.firstName)
+     let lastName = replaysletter(user.lastName ? user.lastName : '')
+     ctx.reply(`🔎 User found:\n\n● User ID: ${user.chatId} ${user.username && `\n● Username: @${username}`}\n● Name: [${firstName} ${user.lastName ? lastName : ''}](tg://user?id=${user.chatId})\n● Status: ${user.isBlocked ? 'Blocked ❌' : 'Active ✅'}`,
+      {parse_mode: 'MarkdownV2',
+      disable_web_page_preview: true});
    } else {
      ctx.reply(`User not found for ${username}`);
    }

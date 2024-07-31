@@ -3,13 +3,12 @@ import { db, User } from './db.js';
 
 export const Start = '*Welcome to Code Pro Bot 👋*\n\n*I can convert Unicode to Ascii 😉*\nSend your text here 📝\n\nUse /help for more\n\n★Join here 👉 @pencemodesign'
 export const Help = '*⭕️ Hey; Follow these steps:* \n\n _● Send your Malayalam text here \n ● I will send some text \n ● Just copy & paste \n ● Select any Malayalam Ascii font \n ● For more go to @pencemodesign_\n\n⭕️ *Available Commands* \n\n /start : Checking bot online \n /help : For more help \n /about : For more about me \n /issues : letter problem\n /toadmin : Message to admin  \n\n*©️ @pencemodesigns*'
-export const About = '📄 About the Bot\n\nThis bot converts Unicode to ASCII text. Use it to easily convert your texts. Contact @pencemodesign for more info.'
-const Commands = '👮‍♂️ Admin Commands :- \n\n●/users - Count of users\n●/allusers - List of all users\n●/search <userName> - Find User\n●/sendmessage <userName> <your text> - Send msg\n●/broadcast --<button> <link> - Brodcast\n●/block <userName> - Block user\n●/unblock <userName> - Unblockusers user\n●/blockedusers List of blocked user\n●/delete To delete user'
+export const About = '📄 <b>About Code Pro bot v2.2.0</b>\n\n<b>Creator :</b> <a href="http://t.me/mnmsby">α̅η̲ɗɾo͚ȋɗ കുഞ്ഞപ്പൻ </a>\n<b>Updates :</b> <a href="https://t.me/pencemodesigns">Pencemo Designs</a>\n<b>Language :</b> JavaScript\n<b>DataBase</b> : <a href="https://www.mongodb.com/">MongoDB</a>\n<b>Build Status :</b> v2.1.0 [stable]'
+
+const Commands = '👮‍♂️ Admin Commands :- \n\n●/users - Count of users\n●/allusers - List of all users\n●/search <userName> - Find User\n●/sendmessage <userName> <your text> - Send msg\n●/broadcast <msg> --<button> <link> - Brodcast\n●/block <userName> - Block user\n●/unblock <userName> - Unblockusers user\n●/blockedusers List of blocked user\n●/delete To delete user'
 const Admin = '👋👋 Hey; Admin \n Follow billow button to use admin options \n\n🚀 Commands = Admin Commands\n🚀 Usars = All users count\n🚀 Block = List of Block users\n🚀 Home = Start Message'
-// const BotUser = model('User', UserSchema);
 
-
-export const callBack = async (ctx) => {
+export const callBack = async (ctx, asciiTexts) => {
     const callbackData = ctx.callbackQuery.data;
  
     if(callbackData === 'help'){
@@ -20,8 +19,17 @@ export const callBack = async (ctx) => {
 
     }else if(callbackData === 'about'){
        ctx.editMessageText(About, {
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
           ...aboutMarkup
        })
+       
+    }else if(callbackData === 'delete'){
+       try {
+        await ctx.api.deleteMessage(ctx.callbackQuery.message.chat.id, ctx.callbackQuery.message.message_id);
+       } catch(err){
+        console.log(err);
+       }
 
     }else if(callbackData === 'start'){
        ctx.editMessageText(Start, {
@@ -71,6 +79,85 @@ export const callBack = async (ctx) => {
           ...adminBtn
          })
       }
+    }
+    
+    if (callbackData === 'mlkv') {
+
+      let mlkvAsciiText = asciiTexts.replace(/ï/g, '@')
+      // Reply with the mlkv asciiText
+      ctx.editMessageText(`<code>${mlkvAsciiText}</code>`, {
+          parse_mode: 'HTML',
+          reply_markup: {
+              inline_keyboard: [
+                  [
+                    {text: 'Back 🔙', callback_data: 'fml'}
+                  ]
+              ]
+          }
+      });
+
+    } else if (callbackData === 'fml') {
+
+      let fmlAsciiText = asciiTexts
+      ctx.editMessageText(`<code>${fmlAsciiText}</code>\n\n⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑\n<i>📝 Use the buttons below to convert to another fonts</i>`, {
+          parse_mode: 'HTML',
+          reply_markup: {
+              inline_keyboard: [
+                  [
+                    {text: 'MLKV', callback_data: 'mlkv'},
+                    {text: 'Scribe', callback_data: 'scribe'}
+                  ],
+                  [
+                    {text: 'Apple cards', callback_data: 'apple'},
+                    {text: 'FML, MVM', callback_data: 'mvm'}
+                  ]
+              ]
+          }
+      });
+
+    } else if (callbackData === 'scribe') {
+
+      let scribeAsciiText = asciiTexts.replace(/ï/g, '>')
+      // Reply with the scribe asciiText
+      ctx.editMessageText(`<code>${scribeAsciiText}</code>`, {
+          parse_mode: 'HTML',
+          reply_markup: {
+              inline_keyboard: [
+                  [
+                    {text: 'Back 🔙', callback_data: 'fml'}
+                  ]
+              ]
+          }
+      });
+    } else if (callbackData === 'mvm') {
+
+      let mvmAsciiText = asciiTexts
+      // Reply with the mvm asciiText
+      ctx.editMessageText(`<code>${mvmAsciiText}</code>`, {
+          parse_mode: 'HTML',
+          reply_markup: {
+              inline_keyboard: [
+                  [
+                    {text: 'Back 🔙', callback_data: 'fml'}
+                  ]
+              ]
+          }
+      });
+    } else if (callbackData === 'apple') {
+
+      let appleAsciiText = asciiTexts.replace(/ï/g, '@')
+      // Reply with the apple asciiText
+      ctx.editMessageText(`<code>${appleAsciiText}</code>`, {
+          parse_mode: 'HTML',
+          reply_markup: {
+              inline_keyboard: [
+                  [
+                    {text: 'Back 🔙', callback_data: 'fml'}
+                  ]
+              ]
+          }
+      });
+
     }
  
     ctx.answerCallbackQuery();
