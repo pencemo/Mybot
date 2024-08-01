@@ -134,7 +134,7 @@ bot.use(async (ctx, next) => {
           disable_web_page_preview: true
         });
       } catch (error) {
-        console.log(error);
+        console.log('error');
       }
     });
   }
@@ -180,7 +180,11 @@ bot.command('sendmessage', async (ctx) => {
       await bot.api.sendMessage(user.chatId, message);
       ctx.reply(`Message sent to @${username}.`);
     } catch (error) {
-      ctx.reply(`Failed to send message to @${username}.`);
+      if (error.response && error.response.error_code === 403) {
+        ctx.reply(`User @${username} blocked the bot. Removing from database.`);
+      } else {
+        ctx.reply(`Failed to send message to @${username}.`);
+      }
     }
   } else {
     ctx.reply('User not found.');
@@ -351,7 +355,11 @@ admins.forEach(async (admin) => {
   try {
     await bot.api.sendMessage(admin.chatId, `💌 Message from @${ctx.from.username}\n\n ${messageText}`);
   } catch (error) {
-    ctx.reply(`Error sending message to admin`);
+    if (error.response && error.response.error_code === 403) {
+      ctx.reply(`Admin not found`);
+    } else {
+      ctx.reply(`Error sending message to admin`);
+    }
   }
 });
 
@@ -470,7 +478,7 @@ bot.command('blockedusers', async (ctx) => {
           return user.firstName ? user.firstName : `Id: ${user.chatId}`;
         }
       }).join('\n');
-      ctx.reply(`Blocked users:\n${userList}`);
+      ctx.reply(`Blocked users list :\n\n${userList}`);
     } else {
       ctx.reply('No users are currently blocked.');
     }
@@ -527,26 +535,26 @@ bot.catch((err) => {
 
 
 
-// const app = express();
-// app.use(bodyParser.json());
+const app = express();
+app.use(bodyParser.json());
 
-// // Webhook endpoint
-// app.post('/webhook', async (req, res) => {
-//   await bot.handleUpdate(req.body);
-//   res.sendStatus(200);
-// });
+// Webhook endpoint
+app.post('/webhook', async (req, res) => {
+  await bot.handleUpdate(req.body);
+  res.sendStatus(200);
+});
 
-// // Start bot and server
-// async function start() {
-//   try {
-//     await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
-//     app.listen(port, () => console.log(`Bot listening on port ${port}`));
-//   } catch (error) {
-//     console.error('Error starting bot:', error);
-//   }
-// }
+// Start bot and server
+async function start() {
+  try {
+    await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
+    app.listen(port, () => console.log(`Bot listening on port ${port}`));
+  } catch (error) {
+    console.error('Error starting bot:', error);
+  }
+}
 
-// start()
+start()
 
 // Start the bot
 bot.start();
