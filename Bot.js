@@ -567,26 +567,26 @@ bot.catch((err) => {
 
 
 
-// const app = express();
-// app.use(bodyParser.json());
+const app = express();
+app.use(bodyParser.json());
 
-// // Webhook endpoint
-// app.post('/webhook', async (req, res) => {
-//   await bot.handleUpdate(req.body);
-//   res.sendStatus(200);
-// });
+// Webhook endpoint
+app.post('/webhook', async (req, res) => {
+  await bot.handleUpdate(req.body);
+  res.sendStatus(200);
+});
 
-// // Start bot and server
-// async function start() {
-//   try {
-//     await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
-//     app.listen(port, () => console.log(`Bot listening on port ${port}`));
-//   } catch (error) {
-//     console.error('Error starting bot:', error);
-//   }
-// }
+// Start bot and server
+async function start() {
+  try {
+    await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
+    app.listen(port, () => console.log(`Bot listening on port ${port}`));
+  } catch (error) {
+    console.error('Error starting bot:', error);
+  }
+}
 
-// start()
+start()
 
 // Start the bot
 bot.start();
