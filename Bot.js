@@ -141,6 +141,17 @@ bot.use(async (ctx, next) => {
   return next();
 })
 
+// Function to delete a message after a delay
+export const deleteMessageAfterDelay = (chatId, messageId, delay) => {
+  setTimeout(async () => {
+    try {
+      await bot.api.deleteMessage(chatId, messageId);
+    } catch (error) {
+      console.error(`Failed to delete message ${messageId} from chat ${chatId}:`, error);
+    }
+  }, delay);
+};
+
 // Command to start interaction with the bot
 bot.command('start', async (ctx) => {
   const {first_name, id} = ctx.from;
@@ -221,6 +232,10 @@ bot.command('broadcast', async (ctx) => {
   }
 
   const users = await User.find().exec();
+  let successCount = 0;
+  let failedCount = 0;
+  let blockUsers = 0;
+  let failedUser =[]
 
   for (const user of users) {
     try {
@@ -287,17 +302,26 @@ bot.command('broadcast', async (ctx) => {
           parse_mode: 'MarkdownV2'
         });
       }
+      successCount++
     } catch (error) {
       if (error.response && error.response.error_code === 403) {
         ctx.reply(`User @${user.username} blocked the bot. Removing from database.`);
+        blockUsers++
         await User.findOneAndDelete({ chatId: user.chatId });
       } else {
-        ctx.reply(`Error sending message to @${user.username}`);
+        failedCount++
+        failedUser.push(`${user.username ? `@${user.username}` : user.firstName}\n`)
+        // ctx.reply(`Error sending message to @${user.username}`);
       }
     }
   }
 
-  ctx.reply('Broadcast sent to all users.');
+  if (failedUser.length === 0){
+    ctx.reply('Broadcast sent to all users');
+  } else {
+    ctx.reply('Failed users\n\n'+failedUser);
+  }
+  ctx.reply(`Broadcast Logs\n\n👤 Total Users = ${successCount+failedCount}\n✅ Success = ${successCount}\n❎ Failed = ${failedCount}`);
 });
 
 // Command to find number of all users (admin only)
@@ -488,9 +512,7 @@ bot.command('blockedusers', async (ctx) => {
 });
 
 
-let asciiTexts 
-
-bot.on("message:text", ctx => {
+bot.on("message:text", async ctx => {
   var asciiArray = convertToAscii(ctx.message.text);
   let asciiText = '';
   asciiArray.map((item) => {
@@ -498,7 +520,10 @@ bot.on("message:text", ctx => {
   });
   asciiText = asciiText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   
-  ctx.reply(`<code>${asciiText}</code>\n\n⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑\n<i>📝 Use the buttons below to convert to another fonts</i>`,{
+  // Store asciiText in session or some form of context
+  ctx.session.originalAsciiText = asciiText;
+
+  const message = await ctx.reply(`<code>${asciiText}</code>\n\n⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑\n<i>📝 Use the buttons below to convert to another fonts</i>`,{
     parse_mode: 'HTML',
      reply_markup:{
         inline_keyboard: [
@@ -514,11 +539,14 @@ bot.on("message:text", ctx => {
     }
   });
 
-  asciiTexts = asciiText;
+
+  deleteMessageAfterDelay(ctx.chat.id, message.message_id, 900000);
+
+
 });
 
 
-bot.on("callback_query:data", ctx => callBack(ctx, asciiTexts))
+bot.on("callback_query:data", ctx => callBack(ctx))
 
 
 
@@ -558,9 +586,5 @@ start()
 
 // Start the bot
 bot.start();
-
-
-
-
 
 

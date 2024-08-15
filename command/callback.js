@@ -1,5 +1,6 @@
 import {statMarkup, helpMarkup, aboutMarkup, back, adminBtn, adminBack} from './button.js'
 import { db, User } from './db.js';
+import { deleteMessageAfterDelay } from '../Bot.js';
 
 export const Start = '*Welcome to Code Pro Bot 👋*\n\n*I can convert Unicode to Ascii 😉*\nSend your text here 📝\n\nUse /help for more\n\n★Join here 👉 @pencemodesign'
 export const Help = '*⭕️ Hey; Follow these steps:* \n\n _● Send your Malayalam text here \n ● I will send some text \n ● Just copy & paste \n ● Select any Malayalam Ascii font \n ● For more go to @pencemodesign_\n\n⭕️ *Available Commands* \n\n /start : Checking bot online \n /help : For more help \n /about : For more about me \n /issues : letter problem\n /toadmin : Message to admin  \n\n*©️ @pencemodesigns*'
@@ -8,7 +9,11 @@ export const About = '📄 <b>About Code Pro bot v2.2.0</b>\n\n<b>Creator :</b> 
 const Commands = '👮‍♂️ Admin Commands :- \n\n●/users - Count of users\n●/allusers - List of all users\n●/search <userName> - Find User\n●/sendmessage <userName> <your text> - Send msg\n●/broadcast <msg> --<button> <link> - Brodcast\n●/block <userName> - Block user\n●/unblock <userName> - Unblockusers user\n●/blockedusers List of blocked user\n●/delete To delete user'
 const Admin = '👋👋 Hey; Admin \n Follow billow button to use admin options \n\n🚀 Commands = Admin Commands\n🚀 Usars = All users count\n🚀 Block = List of Block users\n🚀 Home = Start Message'
 
-export const callBack = async (ctx, asciiTexts) => {
+
+const time = 900000
+
+
+export const callBack = async (ctx) => {
     const callbackData = ctx.callbackQuery.data;
  
     if(callbackData === 'help'){
@@ -81,11 +86,15 @@ export const callBack = async (ctx, asciiTexts) => {
       }
     }
     
+    const asciiTexts = ctx.session.originalAsciiText || '';
+    const originalMessageId = ctx.callbackQuery.message.message_id;
+    const chatId = ctx.callbackQuery.message.chat.id;
+
     if (callbackData === 'mlkv') {
 
       let mlkvAsciiText = asciiTexts.replace(/ï/g, '@')
       // Reply with the mlkv asciiText
-      ctx.editMessageText(`<code>${mlkvAsciiText}</code>`, {
+      ctx.editMessageText(`<code>${mlkvAsciiText}</code>\n\n⚡ Use MLKV Fonts`, {
           parse_mode: 'HTML',
           reply_markup: {
               inline_keyboard: [
@@ -95,6 +104,10 @@ export const callBack = async (ctx, asciiTexts) => {
               ]
           }
       });
+
+    
+    // Schedule deletion of the message
+    deleteMessageAfterDelay(chatId, originalMessageId, time);
 
     } else if (callbackData === 'fml') {
 
@@ -114,12 +127,14 @@ export const callBack = async (ctx, asciiTexts) => {
               ]
           }
       });
+      // Schedule deletion of the message
+    deleteMessageAfterDelay(chatId, originalMessageId, time);
 
     } else if (callbackData === 'scribe') {
 
       let scribeAsciiText = asciiTexts.replace(/ï/g, '>')
       // Reply with the scribe asciiText
-      ctx.editMessageText(`<code>${scribeAsciiText}</code>`, {
+      ctx.editMessageText(`<code>${scribeAsciiText}</code>\n\n⚡ Use Scribe Fonts`, {
           parse_mode: 'HTML',
           reply_markup: {
               inline_keyboard: [
@@ -129,11 +144,14 @@ export const callBack = async (ctx, asciiTexts) => {
               ]
           }
       });
+      // Schedule deletion of the message
+    deleteMessageAfterDelay(chatId, originalMessageId, time);
+
     } else if (callbackData === 'mvm') {
 
       let mvmAsciiText = asciiTexts
       // Reply with the mvm asciiText
-      ctx.editMessageText(`<code>${mvmAsciiText}</code>`, {
+      ctx.editMessageText(`<code>${mvmAsciiText}</code>\n\n⚡ Use FML or MVM Fonts`, {
           parse_mode: 'HTML',
           reply_markup: {
               inline_keyboard: [
@@ -147,7 +165,7 @@ export const callBack = async (ctx, asciiTexts) => {
 
       let appleAsciiText = asciiTexts.replace(/ï/g, '@')
       // Reply with the apple asciiText
-      ctx.editMessageText(`<code>${appleAsciiText}</code>`, {
+      ctx.editMessageText(`<code>${appleAsciiText}</code>\n\n⚡ Use Apple Cards Fonts`, {
           parse_mode: 'HTML',
           reply_markup: {
               inline_keyboard: [
@@ -157,6 +175,8 @@ export const callBack = async (ctx, asciiTexts) => {
               ]
           }
       });
+      // Schedule deletion of the message
+    deleteMessageAfterDelay(chatId, originalMessageId, time);
 
     }
  
