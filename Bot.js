@@ -316,10 +316,14 @@ bot.command('broadcast', async (ctx) => {
     }
   }
 
-  if (failedUser.length === 0){
-    ctx.reply('Broadcast sent to all users');
-  } else {
-    ctx.reply('Failed users\n\n'+failedUser);
+  try {
+    if (failedUser.length === 0){
+      ctx.reply('Broadcast sent to all users');
+    } else {
+      ctx.reply('Failed users\n\n'+failedUser);
+    }
+  } catch{
+    ctx.reply('Failed to send brodcast to some ones');
   }
   ctx.reply(`Broadcast Logs\n\n👤 Total Users = ${successCount+failedCount}\n✅ Success = ${successCount}\n❎ Failed = ${failedCount}`);
 });
@@ -563,26 +567,26 @@ bot.catch((err) => {
 
 
 
-const app = express();
-app.use(bodyParser.json());
+// const app = express();
+// app.use(bodyParser.json());
 
-// Webhook endpoint
-app.post('/webhook', async (req, res) => {
-  await bot.handleUpdate(req.body);
-  res.sendStatus(200);
-});
+// // Webhook endpoint
+// app.post('/webhook', async (req, res) => {
+//   await bot.handleUpdate(req.body);
+//   res.sendStatus(200);
+// });
 
-// Start bot and server
-async function start() {
-  try {
-    await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
-    app.listen(port, () => console.log(`Bot listening on port ${port}`));
-  } catch (error) {
-    console.error('Error starting bot:', error);
-  }
-}
+// // Start bot and server
+// async function start() {
+//   try {
+//     await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
+//     app.listen(port, () => console.log(`Bot listening on port ${port}`));
+//   } catch (error) {
+//     console.error('Error starting bot:', error);
+//   }
+// }
 
-start()
+// start()
 
 // Start the bot
 bot.start();
