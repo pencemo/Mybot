@@ -51,11 +51,30 @@ bot.use(async (ctx, next) => {
     // If the chat is not private, ignore the message and do nothing
     return;
   }
+  
   // If the chat is private, proceed with the next middleware
   return next();
 });
 
+bot.use(async (ctx, next) => {
+  try {
+    // Attempt to send a typing action (this will fail if the bot is blocked)
+    await ctx.api.sendChatAction(ctx.chat?.id, 'typing');
 
+    // If successful, proceed to the next middleware or handler
+    return next();
+  } catch (err) {
+    // Check if the error is due to the bot being blocked
+    if (err instanceof Error && err.message.includes('Forbidden: bot was blocked by the user')) {
+      console.log(`Bot blocked by user: ${ctx.chat?.id}`);
+      // Do not proceed further if the bot is blocked
+      return;
+    } else {
+      // If it's some other error, rethrow it
+      throw err;
+    }
+  }
+});
 // Load admin usernames from environment variables
 const adminUsernames = process.env.ADMIN_USERNAMES ? process.env.ADMIN_USERNAMES.split(',') : [];
 
@@ -85,31 +104,31 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
-// // Force subscribe middleware
-// bot.use(async (ctx, next) => {
-//   const channelId = process.env.CHANNEL_ID;
-//   const channelUserName = process.env.CHANNEL_USERNAME;
-//   const chatId = ctx.from.id;
+// Force subscribe middleware
+bot.use(async (ctx, next) => {
+  const channelId = process.env.CHANNEL_ID;
+  const channelUserName = process.env.CHANNEL_USERNAME;
+  const chatId = ctx.from.id;
 
-//   try {
-//     const member = await api.getChatMember(channelId, chatId);
+  try {
+    const member = await api.getChatMember(channelId, chatId);
 
-//     if (member.status === 'left' || member.status === 'kicked') {
-//       await ctx.reply(`Please subscribe our channel to use this bot 😐 @${channelUserName}`,{...join});
-//       return;
-//     }
-//   } catch (error) {
-//     if (error.error_code === 400 && error.description.includes('member not found')) {
-//       await ctx.reply(`You are not a member of the channel. Please subscribe to use this bot 😐 @${channelUserName}`,{...join});
-//     } else {
-//       console.error('Error checking channel subscription:', error);
-//       await ctx.reply('An error occurred while checking your subscription status. Please try again later.');
-//     }
-//     return;
-//   }
+    if (member.status === 'left' || member.status === 'kicked') {
+      await ctx.reply(`Please subscribe our channel to use this bot 😐 @${channelUserName}`,{...join});
+      return;
+    }
+  } catch (error) {
+    if (error.error_code === 400 && error.description.includes('member not found')) {
+      await ctx.reply(`You are not a member of the channel. Please subscribe to use this bot 😐 @${channelUserName}`,{...join});
+    } else {
+      console.error('Error checking channel subscription:', error);
+      await ctx.reply('An error occurred while checking your subscription status. Please try again later.');
+    }
+    return;
+  }
 
-//   return next();
-// });
+  return next();
+});
 
 export function escapeMarkdownV2(text) {
   return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
@@ -129,18 +148,18 @@ bot.use(async (ctx, next) => {
       lastName: last_name,
     });
 
-    admins.forEach(async (admin) => {
-      try {
-        let name = escapeMarkdownV2(username ? `@${username}` : first_name);
+    // admins.forEach(async (admin) => {
+    //   try {
+    //     let name = escapeMarkdownV2(username ? `@${username}` : first_name);
         
-        await bot.api.sendMessage(admin.chatId, `[${name}](tg://user?id=${id}) Start This bot`, {
-          parse_mode: 'MarkdownV2',
-          disable_web_page_preview: true
-        });
-      } catch (error) {
-        console.log('error');
-      }
-    });
+    //     await bot.api.sendMessage(admin.chatId, `[${name}](tg://user?id=${id}) Start This bot`, {
+    //       parse_mode: 'MarkdownV2',
+    //       disable_web_page_preview: true
+    //     });
+    //   } catch (error) {
+    //     console.log('error');
+    //   }
+    // });
   }
   return next();
 })
@@ -155,7 +174,7 @@ bot.command('start', async (ctx) => {
     disable_web_page_preview: true,
     ...statMarkup
   });
-});
+}); 
 
 bot.command('help', help)
 bot.command('about', about)

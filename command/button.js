@@ -24,7 +24,7 @@ export const helpMarkup = {
                {text: 'Admin 👮‍♂️', callback_data: 'admin'},
               {text: 'Back 🔙', callback_data: 'start'},
             ],[
-                { text: 'Download App 📱', url: `https://t.me/` }
+                { text: 'Download App 📱', url: `https://www.amazon.com/dp/B0DFPT4JWG/ref=apps_sf_sta` }
             ]
         ]
     }
