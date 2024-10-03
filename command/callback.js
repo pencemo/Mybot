@@ -1,17 +1,37 @@
-import {statMarkup, helpMarkup, aboutMarkup, back, adminBtn, adminBack} from './button.js'
-import { db, User } from './db.js';
-import { deleteMessageAfterDelay } from '../Bot.js';
+import { InlineKeyboard } from 'grammy';
+import {statMarkup, helpMarkup, aboutMarkup, back, adminBtn, adminBack, PaginationKeyboard} from './button.js'
+import { db, User, Message } from './db.js';
+import convertToAscii from '../utils/converter.js'
 
 export const Start = '*Welcome to Code Pro Bot 👋*\n\n*I can convert Unicode to Ascii 😉*\nSend your text here 📝\n\nUse /help for more\n\n★Join here 👉 @pencemodesign'
-export const Help = '*⭕️ Hey; Follow these steps:* \n\n _● Send your Malayalam text here \n ● I will send some text \n ● Just copy & paste \n ● Select any Malayalam Ascii font \n ● For more go to @pencemodesign_\n\n⭕️ *Available Commands* \n\n /start : Checking bot online \n /help : For more help \n /about : For more about me \n /issues : letter problem\n /toadmin : Message to admin  \n\n*©️ @pencemodesigns*'
+// export const Help = '*Code Pro Bot*\n\nThis bot helps you convert Malayalam Unicode text to ASCII. Send your text here and it can be converted to various font styles.  \n\n⭕️ *Available Commands* \n\n /start : Checking bot online \n /help : For more help \n /about : For more about me \n /issues : letter problem\n /toadmin : Message to admin  \n\n*©️ @pencemodesigns*'
+export const Help = '*⭕️ Hey; Follow these steps:* \n\n _This bot helps you convert Malayalam Unicode text to ASCII_\n\n⭕️ *Available Commands* \n\n /start : Checking bot online \n /help : For more help \n /about : For more about me \n /issues : letter problem\n /toadmin : Message to admin  \n\n*©️ @pencemodesigns*'
 export const About = '📄 <b>About Code Pro bot v2.2.0</b>\n\n<b>Creator :</b> <a href="http://t.me/mnmsby">α̅η̲ɗɾo͚ȋɗ കുഞ്ഞപ്പൻ </a>\n<b>Updates :</b> <a href="https://t.me/pencemodesigns">Pencemo Designs</a>\n<b>Language :</b> JavaScript\n<b>DataBase</b> : <a href="https://www.mongodb.com/">MongoDB</a>\n<b>Build Status :</b> v2.1.0 [stable]'
 
 const Commands = '👮‍♂️ Admin Commands :- \n\n●/users - Count of users\n●/allusers - List of all users\n●/search <userName> - Find User\n●/sendmessage <userName> <your text> - Send msg\n●/broadcast <msg> --<button> <link> - Brodcast\n●/block <userName> - Block user\n●/unblock <userName> - Unblockusers user\n●/blockedusers List of blocked user\n●/delete To delete user'
 const Admin = '👋👋 Hey; Admin \n Follow billow button to use admin options \n\n🚀 Commands = Admin Commands\n🚀 Usars = All users count\n🚀 Block = List of Block users\n🚀 Home = Start Message'
 
+async function saveToDB(userId, text) {
+  try {
+      await Message.updateOne(
+          { id: userId },
+          { $push: { text: { text } } },
+          { upsert: true }
+      );
+  } catch (error) {
+      console.error('Error saving message to database:', error);
+  }
+}
 
-const time = 900000
+export async function fetchMessages(userId, page = 1) {
+  const PAGE_SIZE = 8; // Number of messages per page
+  const skip = (page - 1) * PAGE_SIZE;
+  const messages = await Message.findOne({ id: userId });
+  
+  if (!messages) return [];
 
+  return messages.text.slice(skip, skip + PAGE_SIZE);
+}
 
 export const callBack = async (ctx) => {
     const callbackData = ctx.callbackQuery.data;
@@ -87,8 +107,8 @@ export const callBack = async (ctx) => {
     }
     
     const asciiTexts = ctx.session.originalAsciiText || '';
-    const originalMessageId = ctx.callbackQuery.message.message_id;
-    const chatId = ctx.callbackQuery.message.chat.id;
+    const unicodeText = ctx.session.unicode || '';
+    const userId = ctx.from.id;
 
     if (callbackData === 'mlkv') {
 
@@ -106,8 +126,6 @@ export const callBack = async (ctx) => {
       });
 
     
-    // Schedule deletion of the message
-    deleteMessageAfterDelay(chatId, originalMessageId, time);
 
     } else if (callbackData === 'fml') {
 
@@ -127,8 +145,6 @@ export const callBack = async (ctx) => {
               ]
           }
       });
-      // Schedule deletion of the message
-    deleteMessageAfterDelay(chatId, originalMessageId, time);
 
     } else if (callbackData === 'scribe') {
 
@@ -144,8 +160,6 @@ export const callBack = async (ctx) => {
               ]
           }
       });
-      // Schedule deletion of the message
-    deleteMessageAfterDelay(chatId, originalMessageId, time);
 
     } else if (callbackData === 'mvm') {
 
@@ -175,12 +189,125 @@ export const callBack = async (ctx) => {
               ]
           }
       });
-      // Schedule deletion of the message
-    deleteMessageAfterDelay(chatId, originalMessageId, time);
 
+    } else if (callbackData === 'save') {
+
+      // let appleAsciiText = asciiTexts
+      try{
+        if(unicodeText.length > 3000){
+          await editMessageText('text is too long')
+        }else{
+          await saveToDB(userId, unicodeText);
+          ctx.editMessageText(`<code>Message saved successfully!</code>\n\n⚡-/savedtext to show msg`, {
+              parse_mode: 'HTML',
+              reply_markup: {
+                  inline_keyboard: [
+                      [
+                        {text: 'Back 🔙', callback_data: 'fml'}
+                      ]
+                  ]
+              }
+          });
+        }
+      }catch(err){
+        ctx.editMessageText(`<b>Error to save message</b>⚡\n\n`, {
+            parse_mode: 'HTML',
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                      {text: 'Back 🔙', callback_data: 'fml'}
+                    ]
+                ]
+            }
+        });
+      }
+
+    }
+
+
+
+    const [action, iduser, args] = callbackData.split(':');
+
+    if (action === 'msg') {
+        // Send the selected message
+        try{
+          const id = args
+          const data = await Message.findOne({ id: iduser })
+          const text = data.text.find(item => item._id.equals(id));
+
+          var asciiArray = convertToAscii(text.text);
+
+          let savedAscii = '';
+          asciiArray.map((item) => {
+            savedAscii += item.chunk;
+          });
+          savedAscii = savedAscii.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+          if(text.text.length < 1500){
+            await ctx.editMessageText(`Unicode Text 📝\n----------------------\n${text.text}\n\nAscii Text 📝\n----------------------\n${savedAscii}`, {
+              reply_markup : {
+                inline_keyboard: [
+                    [
+                        { text: 'Delete 🗑️', callback_data: `delete:${userId}:${text.id}` },
+                        { text: 'Back 🔙', callback_data: `page:${userId}:${1}` } 
+                    ]
+                ]
+            }
+            });
+            
+          }else if(text.text.length > 1500 && text.text.length < 3000){
+            await ctx.editMessageText(`Unicode Text 📝\n----------------------\n${text.text}`, {
+              reply_markup : {
+                inline_keyboard: [
+                    [
+                        { text: 'Delete 🗑️', callback_data: `delete:${userId}:${text.id}` },
+                        { text: 'Back 🔙', callback_data: `page:${userId}:${1}` } 
+                    ]
+                ]
+            }
+            });
+            await ctx.reply(`Ascii Text 📝\n----------------------\n${savedAscii}`);
+          }else{
+            await ctx.reply(`Your text is too long i cant sent it`);
+          }
+        }catch(err){
+          await ctx.reply('Error to load text')
+        }
+    } else if (action === 'page') {
+        const page = parseInt(args[0]);
+        const messages = await fetchMessages(iduser, page);
+        const totalMessages = (await Message.findOne({ id: iduser }))?.text.length || 0;
+        const totalPages = Math.ceil(totalMessages / 8);
+
+        // Build the keyboard with updated pagination
+        const keyboard = new InlineKeyboard();
+        messages.forEach((msg, index) => {
+            if(index % 2 == 0){
+              keyboard.add({ text: `${msg.text}`, callback_data: `msg:${iduser}:${msg.id}` });
+            }else{
+              keyboard.add({ text: `${msg.text}`, callback_data: `msg:${iduser}:${msg.id}` }).row();
+            }
+        });
+        const buttonpage = PaginationKeyboard(iduser, page, totalPages);
+        keyboard.add(...buttonpage);
+
+        await ctx.editMessageText('Here are your saved messages', {
+            reply_markup: keyboard 
+        });
+    } else if (action === 'delete'){
+        const id = args
+        const data = await Message.findOne({ id: iduser }) 
+        const updated = data.text.filter((item)=> item.id !== id)
+        await Message.findOneAndUpdate({id: iduser}, {text: updated}, {upsert: true},)
+          .then(()=>{
+            ctx.editMessageText('Message deleted successfully')
+          }).catch(()=>{
+            ctx.editMessageText('Error deleting message')
+          })
+        
     }
  
     ctx.answerCallbackQuery();
  }
-
+ 
 

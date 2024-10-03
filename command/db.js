@@ -10,7 +10,7 @@ connect(process.env.MONGODB_URI, {
   const db = connection;
   db.on('error', console.error.bind(console, 'MongoDB connection error:'));
   db.once('open', () => {
-    console.log('Connected to MongoDB');
+    console.log('Connected to MongoDB');  
   });
   
   // Define a schema for storing users
@@ -22,8 +22,14 @@ connect(process.env.MONGODB_URI, {
     isAdmin: { type: Boolean, default: false },
     isBlocked: { type: Boolean, default: false }, 
   });
+
+  const savedText = new Schema({
+    id: { type: Number, required: true, unique: true },
+    text: [{ text: String}], 
+  });
   
   
   const User = model('User', UserSchema);
+  const Message = model('Message', savedText);
 
-export {db, User,};
+export {db, User, Message};

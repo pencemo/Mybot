@@ -1,12 +1,16 @@
-import { Bot, session, InlineKeyboard } from 'grammy';
+import { Bot, session, InlineKeyboard, InputFile } from 'grammy';
 import dotenv from "dotenv";
 dotenv.config()
 import { Api } from 'grammy';
 import convertToAscii from './utils/converter.js';
-import {callBack, Start} from './command/callback.js';
-import {statMarkup, join} from './command/button.js'
-import { help, about, issues, id , search, deleteuser} from './command/command.js';
-import { db, User } from './command/db.js';
+import {callBack, fetchMessages, Start} from './command/callback.js';
+import {statMarkup, join, PaginationKeyboard} from './command/button.js'
+import { help, about, issues, id , search, deleteuser, download} from './command/command.js';
+import { db, Message, User } from './command/db.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { join as joine } from 'path';
+import fs from 'fs';
 
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -81,33 +85,33 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
-// Force subscribe middleware
-bot.use(async (ctx, next) => {
-  const channelId = process.env.CHANNEL_ID;
-  const channelUserName = process.env.CHANNEL_USERNAME;
-  const chatId = ctx.from.id;
+// // Force subscribe middleware
+// bot.use(async (ctx, next) => {
+//   const channelId = process.env.CHANNEL_ID;
+//   const channelUserName = process.env.CHANNEL_USERNAME;
+//   const chatId = ctx.from.id;
 
-  try {
-    const member = await api.getChatMember(channelId, chatId);
+//   try {
+//     const member = await api.getChatMember(channelId, chatId);
 
-    if (member.status === 'left' || member.status === 'kicked') {
-      await ctx.reply(`Please subscribe our channel to use this bot 😐 @${channelUserName}`,{...join});
-      return;
-    }
-  } catch (error) {
-    if (error.error_code === 400 && error.description.includes('member not found')) {
-      await ctx.reply(`You are not a member of the channel. Please subscribe to use this bot 😐 @${channelUserName}`,{...join});
-    } else {
-      console.error('Error checking channel subscription:', error);
-      await ctx.reply('An error occurred while checking your subscription status. Please try again later.');
-    }
-    return;
-  }
+//     if (member.status === 'left' || member.status === 'kicked') {
+//       await ctx.reply(`Please subscribe our channel to use this bot 😐 @${channelUserName}`,{...join});
+//       return;
+//     }
+//   } catch (error) {
+//     if (error.error_code === 400 && error.description.includes('member not found')) {
+//       await ctx.reply(`You are not a member of the channel. Please subscribe to use this bot 😐 @${channelUserName}`,{...join});
+//     } else {
+//       console.error('Error checking channel subscription:', error);
+//       await ctx.reply('An error occurred while checking your subscription status. Please try again later.');
+//     }
+//     return;
+//   }
 
-  return next();
-});
+//   return next();
+// });
 
-function escapeMarkdownV2(text) {
+export function escapeMarkdownV2(text) {
   return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
 }
 
@@ -141,16 +145,6 @@ bot.use(async (ctx, next) => {
   return next();
 })
 
-// Function to delete a message after a delay
-export const deleteMessageAfterDelay = (chatId, messageId, delay) => {
-  setTimeout(async () => {
-    try {
-      await bot.api.deleteMessage(chatId, messageId);
-    } catch (error) {
-      console.error(`Failed to delete message ${messageId} from chat ${chatId}:`, error);
-    }
-  }, delay);
-};
 
 // Command to start interaction with the bot
 bot.command('start', async (ctx) => {
@@ -167,6 +161,7 @@ bot.command('help', help)
 bot.command('about', about)
 bot.command('issues', issues)
 bot.command('id', id)
+bot.command('download', download)
 
 // Command to find a user by username (admin only)
 bot.command('search', search);
@@ -516,6 +511,68 @@ bot.command('blockedusers', async (ctx) => {
 });
 
 
+bot.command('savedtext', async (ctx) => {
+  const userId = ctx.from.id;
+  const page = 1; // Start with the first page
+
+  // Fetch messages and pagination details
+  const messages = await fetchMessages(userId, page);
+  const totalMessages = (await Message.findOne({ id: userId }))?.text.length || 0;
+  const totalPages = Math.ceil(totalMessages / 8);
+
+  // Build the keyboard with message buttons and pagination controls
+  if(messages.length > 0){
+  const keyboard = new InlineKeyboard();
+  messages.forEach((msg, index) => {
+    if(index % 2 == 0){
+      keyboard.add({ text: `${msg.text}`, callback_data: `msg:${userId}:${msg.id}` });
+    }else{
+      keyboard.add({ text: `${msg.text}`, callback_data: `msg:${userId}:${msg.id}` }).row();
+    }
+      // keyboard.add({ text: `${index + 1} : ${msg.text}`, callback_data: `msg:${userId}:${msg.id}` }).row();
+  });
+  if(totalPages > 1){
+    const pagebutton = PaginationKeyboard(userId, page, totalMessages)
+    keyboard.add(...pagebutton);
+  }
+
+  // Send the message with buttons
+    await ctx.reply('Here are your saved messages:', {
+        reply_markup: keyboard
+    });
+  }else{
+    await ctx.reply('not saved messages')
+  }
+});
+
+
+
+
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+bot.command('tutorial', async (ctx) => {
+  const filePath = joine(__dirname, 'assets', 'Tutorial.mp4');
+  
+  try{
+
+    if (fs.existsSync(filePath)) {
+        try {
+            await ctx.replyWithVideo(new InputFile(filePath));
+        } catch (error) {
+            console.error('Failed to send file:', error);
+            await ctx.reply('There was an error sending the file.');
+        }
+    } else {
+        await ctx.reply('File not found.');
+    }
+  }catch(err){
+    console.log(err);
+  }
+});
+
+
 bot.on("message:text", async ctx => {
   var asciiArray = convertToAscii(ctx.message.text);
   let asciiText = '';
@@ -526,8 +583,9 @@ bot.on("message:text", async ctx => {
   
   // Store asciiText in session or some form of context
   ctx.session.originalAsciiText = asciiText;
+  ctx.session.unicode = ctx.message.text;
 
-  const message = await ctx.reply(`<code>${asciiText}</code>\n\n⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑\n<i>📝 Use the buttons below to convert to another fonts</i>`,{
+  await ctx.reply(`<code>${asciiText}</code>\n\n⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑⭑\n<i>📝 Use the buttons below to convert to another fonts</i>`,{
     parse_mode: 'HTML',
      reply_markup:{
         inline_keyboard: [
@@ -538,16 +596,18 @@ bot.on("message:text", async ctx => {
           [
             {text: 'Apple Cards', callback_data: 'apple'},
             {text: 'FML, MVM', callback_data: 'mvm'}
+          ],
+          [
+            {text: 'Save Text 📝', callback_data: 'save'},
           ]
         ]
     }
   });
 
-
-  deleteMessageAfterDelay(ctx.chat.id, message.message_id, 900000);
-
-
 });
+
+
+
 
 
 bot.on("callback_query:data", ctx => callBack(ctx))
@@ -556,9 +616,8 @@ bot.on("callback_query:data", ctx => callBack(ctx))
 
 // Global error handler
 bot.catch((err) => {
-  console.error('Error occurred:', err);
-
   const ctx = err.ctx;
+  console.error(err.message)
   if (ctx) {
     ctx.reply('An unexpected error occurred. Please try again later.');
   }
@@ -579,7 +638,7 @@ app.post('/webhook', async (req, res) => {
 // Start bot and server
 async function start() {
   try {
-    await bot.api.setWebhook(`${webhookurl}/webhook`); // Replace with your actual webhook URL
+    await bot.api.setWebhook(`${webhookurl}/webhook`); 
     app.listen(port, () => console.log(`Bot listening on port ${port}`));
   } catch (error) {
     console.error('Error starting bot:', error);

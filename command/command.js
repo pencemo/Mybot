@@ -3,6 +3,7 @@ import { Help, About } from "./callback.js"
 import { db, User } from './db.js';
 
 const issuesMdg = '📝 Use letter below for solving ണ്ട problem; \n\n   ● MLKV & Apple cards  👉  ( @ ) \n   ● FML & MVM  👉 ( ï ) \n   ● Scribe  👉  ( > )\n\n📝 Use letter below for solving സ്റ്റ problem\n\n   ● All fonts 👉 ( Ì ) \n\n\n©️ @pencemodesign'
+const downLoad = 'Download [Code pro app](https://www.amazon.com/dp/B0DFPT4JWG/ref=apps_sf_sta) from Amazon Appstore '
 
 const help = (ctx) => {
     ctx.reply(Help, {
@@ -11,6 +12,21 @@ const help = (ctx) => {
          inline_keyboard: [
             [
                  {text: '🌟 Share Me 🌟', url:'http://t.me/share/url?url=https://t.me/Unicodepro_bot'}
+             ],[
+               {text: 'Home', callback_data: 'start'}
+             ]
+         ]
+     }
+    })
+ }
+
+const download = (ctx) => {
+    ctx.reply(downLoad, {
+       parse_mode: 'MarkdownV2',
+       reply_markup:{
+         inline_keyboard: [
+            [
+                 {text: 'Download 🌟', url:'https://www.amazon.com/dp/B0DFPT4JWG/ref=apps_sf_sta'}
              ],[
                {text: 'Home', callback_data: 'start'}
              ]
@@ -121,4 +137,4 @@ const deleteuser = async (ctx) => {
  };
  
 
- export {id, search, issues, about, help, deleteuser}
+ export {id, search, issues, about, help, deleteuser, download}

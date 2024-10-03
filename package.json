@@ -7,13 +7,14 @@
   "license": "MIT",
   "scripts": {
     "start": "node Bot.js",
-    "dev": "node Bot"
-  },
+    "dev": "nodemon Bot"
+  }, 
   "dependencies": {
     "body-parser": "^1.20.2",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "grammy": "^1.27.0",
-    "mongoose": "^8.5.0"
+    "mongoose": "^8.5.0",
+    "nodemon": "^3.1.4"
   }
 }

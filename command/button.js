@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { InlineKeyboard } from "grammy";
 dotenv.config()
 
 const channelUserName = process.env.CHANNEL_USERNAME;
@@ -20,10 +21,10 @@ export const helpMarkup = {
     reply_markup:{
         inline_keyboard: [
            [
+               {text: 'Admin 👮‍♂️', callback_data: 'admin'},
               {text: 'Back 🔙', callback_data: 'start'},
-              {text: 'Admin 👮‍♂️', callback_data: 'admin'},
             ],[
-                {text: 'Close', callback_data: 'delete'}
+                { text: 'Download App 📱', url: `https://t.me/` }
             ]
         ]
     }
@@ -95,4 +96,45 @@ const adminBack = {
 
 
 
-export {join, adminBtn, adminBack};
+function buildPaginationKeyboard(userId, page, totalPages) {
+    const buttons = [];
+
+    if (page > 1) {
+        buttons.push({ text: 'Previous', callback_data: `page:${userId}:${page - 1}` });
+    }
+
+    if (page < totalPages) {
+        buttons.push({ text: 'Next', callback_data: `page:${userId}:${page + 1}` });
+    }
+
+    if (buttons.length > 0) {
+        // Create a new row for pagination controls
+        return new InlineKeyboard().add(...buttons);
+    }
+
+    return new InlineKeyboard();
+}
+
+
+function PaginationKeyboard(userId, page, totalPages) {
+    const buttons = [];
+  
+    if (page > 1) {
+        buttons.push({ text: '⏪ Previous ', callback_data: `page:${userId}:${page - 1}` });
+    }
+  
+    if (page < totalPages) {
+        buttons.push({ text: 'Next ⏩', callback_data: `page:${userId}:${page + 1}` });
+    }
+  
+    if (buttons.length > 0) {
+        // Create a new row for pagination controls
+        // return new InlineKeyboard().add(...buttons);
+        return buttons
+    }
+  
+    return [];
+  }
+  
+
+export {join, adminBtn, adminBack, buildPaginationKeyboard, PaginationKeyboard};
