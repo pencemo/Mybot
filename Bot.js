@@ -324,7 +324,7 @@ bot.command('broadcast', async (ctx) => {
         await User.findOneAndDelete({ chatId: user.chatId });
       } else {
         failedCount++
-        failedUser.push(`${user.username ? `@${user.username}` : user.firstName}\n`)
+        // failedUser.push(`${user.username ? `@${user.username}` : user.firstName}\n`)
         // ctx.reply(`Error sending message to @${user.username}`);
       }
     }
@@ -334,7 +334,7 @@ bot.command('broadcast', async (ctx) => {
     if (failedUser.length === 0){
       ctx.reply('Broadcast sent to all users');
     } else {
-      ctx.reply('Failed users\n\n'+failedUser);
+      ctx.reply(`Filed to send msg - ${failedCount}`);
     }
   } catch{
     ctx.reply('Failed to send brodcast to some ones');
