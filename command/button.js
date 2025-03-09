@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import { InlineKeyboard } from "grammy";
 dotenv.config()
 
 const channelUserName = process.env.CHANNEL_USERNAME;
@@ -95,46 +94,4 @@ const adminBack = {
 }
 
 
-
-function buildPaginationKeyboard(userId, page, totalPages) {
-    const buttons = [];
-
-    if (page > 1) {
-        buttons.push({ text: 'Previous', callback_data: `page:${userId}:${page - 1}` });
-    }
-
-    if (page < totalPages) {
-        buttons.push({ text: 'Next', callback_data: `page:${userId}:${page + 1}` });
-    }
-
-    if (buttons.length > 0) {
-        // Create a new row for pagination controls
-        return new InlineKeyboard().add(...buttons);
-    }
-
-    return new InlineKeyboard();
-}
-
-
-function PaginationKeyboard(userId, page, totalPages) {
-    const buttons = [];
-  
-    if (page > 1) {
-        buttons.push({ text: '⏪ Previous ', callback_data: `page:${userId}:${page - 1}` });
-    }
-  
-    if (page < totalPages) {
-        buttons.push({ text: 'Next ⏩', callback_data: `page:${userId}:${page + 1}` });
-    }
-  
-    if (buttons.length > 0) {
-        // Create a new row for pagination controls
-        // return new InlineKeyboard().add(...buttons);
-        return buttons
-    }
-  
-    return [];
-  }
-  
-
-export {join, adminBtn, adminBack, buildPaginationKeyboard, PaginationKeyboard};
+export {join, adminBtn, adminBack};

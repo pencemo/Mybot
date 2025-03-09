@@ -3,14 +3,10 @@ import dotenv from "dotenv";
 dotenv.config()
 import { Api } from 'grammy';
 import convertToAscii from './utils/converter.js';
-import {callBack, fetchMessages, Start} from './command/callback.js';
-import {statMarkup, join, PaginationKeyboard} from './command/button.js'
+import {callBack,  Start} from './command/callback.js';
+import {statMarkup, join} from './command/button.js'
 import { help, about, issues, id , search, deleteuser, download} from './command/command.js';
-import { db, Message, User } from './command/db.js';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { join as joine } from 'path';
-import fs from 'fs';
+import { User } from './command/db.js';
 
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -138,7 +134,6 @@ bot.use(async (ctx, next) => {
   const { id, username, first_name, last_name } = ctx.from;
 
   let user = await User.findOne({ chatId: id }).exec();
-  const admins = await User.find({ isAdmin: true }).exec();
 
   if (!user) {
     user = await User.create({
@@ -147,19 +142,6 @@ bot.use(async (ctx, next) => {
       firstName: first_name,
       lastName: last_name,
     });
-
-    // admins.forEach(async (admin) => {
-    //   try {
-    //     let name = escapeMarkdownV2(username ? `@${username}` : first_name);
-        
-    //     await bot.api.sendMessage(admin.chatId, `[${name}](tg://user?id=${id}) Start This bot`, {
-    //       parse_mode: 'MarkdownV2',
-    //       disable_web_page_preview: true
-    //     });
-    //   } catch (error) {
-    //     console.log('error');
-    //   }
-    // });
   }
   return next();
 })
@@ -182,7 +164,6 @@ bot.command('issues', issues)
 bot.command('id', id)
 bot.command('download', download)
 
-// Command to find a user by username (admin only)
 bot.command('search', search);
 bot.command('delete', deleteuser);
 
@@ -530,66 +511,7 @@ bot.command('blockedusers', async (ctx) => {
 });
 
 
-bot.command('savedtext', async (ctx) => {
-  const userId = ctx.from.id;
-  const page = 1; // Start with the first page
 
-  // Fetch messages and pagination details
-  const messages = await fetchMessages(userId, page);
-  const totalMessages = (await Message.findOne({ id: userId }))?.text.length || 0;
-  const totalPages = Math.ceil(totalMessages / 8);
-
-  // Build the keyboard with message buttons and pagination controls
-  if(messages.length > 0){
-  const keyboard = new InlineKeyboard();
-  messages.forEach((msg, index) => {
-    if(index % 2 == 0){
-      keyboard.add({ text: `${msg.text}`, callback_data: `msg:${userId}:${msg.id}` });
-    }else{
-      keyboard.add({ text: `${msg.text}`, callback_data: `msg:${userId}:${msg.id}` }).row();
-    }
-      // keyboard.add({ text: `${index + 1} : ${msg.text}`, callback_data: `msg:${userId}:${msg.id}` }).row();
-  });
-  if(totalPages > 1){
-    const pagebutton = PaginationKeyboard(userId, page, totalMessages)
-    keyboard.add(...pagebutton);
-  }
-
-  // Send the message with buttons
-    await ctx.reply('Here are your saved messages:', {
-        reply_markup: keyboard
-    });
-  }else{
-    await ctx.reply('not saved messages')
-  }
-});
-
-
-
-
-
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-bot.command('tutorial', async (ctx) => {
-  const filePath = joine(__dirname, 'assets', 'Tutorial.mp4');
-  
-  try{
-
-    if (fs.existsSync(filePath)) {
-        try {
-            await ctx.replyWithVideo(new InputFile(filePath));
-        } catch (error) {
-            console.error('Failed to send file:', error);
-            await ctx.reply('There was an error sending the file.');
-        }
-    } else {
-        await ctx.reply('File not found.');
-    }
-  }catch(err){
-    console.log(err);
-  }
-});
 
 
 bot.on("message:text", async ctx => {
@@ -615,9 +537,6 @@ bot.on("message:text", async ctx => {
           [
             {text: 'Apple Cards', callback_data: 'apple'},
             {text: 'FML, MVM', callback_data: 'mvm'}
-          ],
-          [
-            {text: 'Save Text 📝', callback_data: 'save'},
           ]
         ]
     }
