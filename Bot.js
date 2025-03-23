@@ -1,4 +1,4 @@
-import { Bot, session, InlineKeyboard, InputFile } from 'grammy';
+import { Bot, session, InlineKeyboard, InputFile, webhookCallback } from 'grammy';
 import dotenv from "dotenv";
 dotenv.config()
 import { Api } from 'grammy';
@@ -568,24 +568,28 @@ const app = express();
 app.use(bodyParser.json());
 
 // Webhook endpoint
-app.post('/webhook', async (req, res) => {
-  await bot.handleUpdate(req.body);
-  res.sendStatus(200);
-});
+// app.post('/webhook', async (req, res) => {
+//   await bot.handleUpdate(req.body);
+//   res.sendStatus(200);
+// });
 
-// Start bot and server
-async function start() {
-  try {
-    await bot.api.setWebhook(`${webhookurl}/webhook`); 
-    app.listen(port, () => console.log(`Bot listening on port ${port}`));
-  } catch (error) {
-    console.error('Error starting bot:', error);
-  }
-}
+// // Start bot and server
+// async function start() {
+//   try {
+//     await bot.api.setWebhook(`${webhookurl}/webhook`); 
+//     app.listen(port, () => console.log(`Bot listening on port ${port}`));
+//   } catch (error) {
+//     console.error('Error starting bot:', error);
+//   }
+// }
 
-start()
+// start()
 
 // Start the bot
-bot.start();
+bot.start({
+  onStart: (info) => console.log(`Bot started as @${info.username}`),
+});
 
+app.use(webhookCallback(bot, "express"));
 
+app.listen(port, () => console.log(`Bot listening on port ${port}`));
