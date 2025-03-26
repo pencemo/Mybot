@@ -1,14 +1,16 @@
+import mongoose from "mongoose";
 import pkg from "mongoose";
-const { connect, connection, Schema, model } = pkg;
+const {  Schema, model } = pkg;
 
-// Connect to MongoDB
-connect(process.env.MONGODB_URI);
 
-const db = connection;
-db.on("error", console.error.bind(console, "MongoDB connection error:"));
-db.once("open", () => {
-  console.log("Connected to MongoDB");
-});
+const db =  async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, );
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+  }
+}
 
 // Define a schema for storing users
 const UserSchema = new Schema({

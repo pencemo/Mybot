@@ -6,7 +6,7 @@ import convertToAscii from './utils/converter.js';
 import {callBack,  Start} from './command/callback.js';
 import {statMarkup, join} from './command/button.js'
 import { help, about, issues, id , search, deleteuser, download} from './command/command.js';
-import { User } from './command/db.js';
+import { User, db } from './command/db.js';
 
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -567,29 +567,34 @@ bot.catch((err) => {
 const app = express();
 app.use(bodyParser.json());
 
-// Webhook endpoint
-// app.post('/webhook', async (req, res) => {
-//   await bot.handleUpdate(req.body);
-//   res.sendStatus(200);
-// });
 
-// // Start bot and server
-// async function start() {
-//   try {
-//     await bot.api.setWebhook(`${webhookurl}/webhook`); 
-//     app.listen(port, () => console.log(`Bot listening on port ${port}`));
-//   } catch (error) {
-//     console.error('Error starting bot:', error);
-//   }
-// }
-
-// start()
-
-// Start the bot
-bot.start({
-  onStart: (info) => console.log(`Bot started as @${info.username}`),
+app.post("/webhook", async (req, res) => {
+  await bot.init();
+  const update = req.body;
+  try {
+    await bot.handleUpdate(update);
+    res.status(200).send("OK");
+  } catch (error) {
+    console.error("Error handling webhook update:", error);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
-app.use(webhookCallback(bot, "express"));
+const start = async () => {
+  const url = `${process.env.WEBHOOK_URL}/webhook`;
+  try {
+    if (process.env.NODE_ENV !== "development") {
+      app.listen(port, () => {console.log(port);})
+      await bot.api.setWebhook(url);
+      console.log("New webhook :", url);
+    } else {
+      console.log("Starting bot in development mode...");
+      bot.start();
+    }
+    db()
+  } catch (error) {
+    console.error("Error setting webhook or starting bot:", error);
+  }
+};
 
-app.listen(port, () => console.log(`Bot listening on port ${port}`));
+start()
