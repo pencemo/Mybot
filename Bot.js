@@ -8,13 +8,13 @@ import {statMarkup, join} from './command/button.js'
 import { help, about, issues, id , search, deleteuser, download} from './command/command.js';
 import { User, db } from './command/db.js';
 
-import express from 'express';
-import bodyParser from 'body-parser';
+// import express from 'express';
+// import bodyParser from 'body-parser';
 
 const bot = new Bot(process.env.BOT_TOKEN);
 const api = new Api(process.env.BOT_TOKEN);
-const port = process.env.PORT || 3000;
-const webhookurl = process.env.WEBHOOK_URL
+// const port = process.env.PORT || 3000;
+// const webhookurl = process.env.WEBHOOK_URL
 
 
 
@@ -561,40 +561,41 @@ bot.catch((err) => {
   }
 });
 
+db()
+bot.start();
 
 
+// const app = express();
+// app.use(bodyParser.json());
 
-const app = express();
-app.use(bodyParser.json());
 
+// app.post("/webhook", async (req, res) => {
+//   await bot.init();
+//   const update = req.body;
+//   try {
+//     await bot.handleUpdate(update);
+//     res.status(200).send("OK");
+//   } catch (error) {
+//     console.error("Error handling webhook update:", error);
+//     res.status(500).send("Internal Server Error");
+//   }
+// });
 
-app.post("/webhook", async (req, res) => {
-  await bot.init();
-  const update = req.body;
-  try {
-    await bot.handleUpdate(update);
-    res.status(200).send("OK");
-  } catch (error) {
-    console.error("Error handling webhook update:", error);
-    res.status(500).send("Internal Server Error");
-  }
-});
+// const start = async () => {
+//   const url = `${process.env.WEBHOOK_URL}/webhook`;
+//   try {
+//     if (process.env.NODE_ENV !== "development") {
+//       app.listen(port, () => {console.log(port);})
+//       await bot.api.setWebhook(url);
+//       console.log("New webhook :", url);
+//     } else {
+//       console.log("Starting bot in development mode...");
+//       bot.start();
+//     }
+//     db()
+//   } catch (error) {
+//     console.error("Error setting webhook or starting bot:", error);
+//   }
+// };
 
-const start = async () => {
-  const url = `${process.env.WEBHOOK_URL}/webhook`;
-  try {
-    if (process.env.NODE_ENV !== "development") {
-      app.listen(port, () => {console.log(port);})
-      await bot.api.setWebhook(url);
-      console.log("New webhook :", url);
-    } else {
-      console.log("Starting bot in development mode...");
-      bot.start();
-    }
-    db()
-  } catch (error) {
-    console.error("Error setting webhook or starting bot:", error);
-  }
-};
-
-start()
+// start()
